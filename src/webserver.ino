@@ -3,8 +3,64 @@
 #include <ESP8266WebServer.h>
 #include <FS.h>
 
-void handleSensor() {
-  server.send(200, "application/json", "{ \"temp\": \""+ String(temp) +"\", \"hum\": \""+ String(hum) +"\" }");
+/**
+
+POST /api/vote/
+-2
+
+*/
+
+class IpWithVote {
+  public:
+    int vote;
+    String ip;
+};
+
+IpWithVote allVotes[10];
+int numberOfVotes = 0;
+
+void handleVote() {
+  IpWithVote *newVote;
+  server.send(200, "application/json","OK");
+
+  newVote = new IpWithVote();
+  newVote->vote = server.arg("plain").toInt();
+  newVote->ip = server.client().remoteIP().toString();
+
+  boolean computedVote = false;
+  for (int i = 0; i < numberOfVotes; i++) {
+    if (allVotes[i].ip == newVote->ip) {
+      Serial.println("IP " + newVote->ip + " já tem voto. O novo permanece.");
+      allVotes[i].vote = newVote->vote;
+      Serial.println(allVotes[i].ip + ' ' + allVotes[i].vote);
+      computedVote = true;
+      break;
+    }
+  }
+
+  if (!computedVote) {
+    allVotes[numberOfVotes] = *newVote;
+    Serial.println(allVotes[numberOfVotes].ip + ' ' + allVotes[numberOfVotes].vote);
+    numberOfVotes++;
+  }
+}
+
+void handleStatus() {
+  String votes = "[";
+  for(int i=0; i<numberOfVotes; i++) {
+    votes.concat(allVotes[i].vote);
+    if(i<numberOfVotes-1) {
+      votes.concat(",");
+    }
+  }
+  votes.concat("]");
+  server.send(200, "application/json",
+  "{ \"temp\": \""+ String(temp) +
+  "\", \"hum\": \""+ String(hum) +
+  "\", \"status\": \""+ 0 +
+  "\", \"votes\": "+ votes +
+  ", \"timeRemaining\": \""+ String(300)
+  +"\" }");
 }
 
 void handleControl() {
@@ -18,7 +74,8 @@ void handleControl() {
 
 void webserver_setup(){
   SPIFFS.begin();
-  server.on("/api/sensor", handleSensor);
+  server.on("/api/status", handleStatus);
+  server.on("/api/vote", handleVote);
   server.on("/api/control", handleControl);
   server.onNotFound([](){
   if(!webserver_handleFileRead(server.uri()))
