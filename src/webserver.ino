@@ -16,8 +16,13 @@ class IpWithVote {
     String ip;
 };
 
+unsigned long TEN_MINUTES = 600000;
+
 IpWithVote allVotes[10];
 int numberOfVotes = 0;
+boolean voteStarted = false;
+unsigned long voteStartTime;
+unsigned long voteEndedTime;
 
 void handleVote() {
   IpWithVote *newVote;
@@ -42,6 +47,11 @@ void handleVote() {
     allVotes[numberOfVotes] = *newVote;
     Serial.println(allVotes[numberOfVotes].ip + ' ' + allVotes[numberOfVotes].vote);
     numberOfVotes++;
+  }
+
+  if(!voteStarted) {
+    voteStarted = true;
+    voteStartTime = millis();
   }
 }
 
@@ -100,6 +110,17 @@ String webserver_getContentType(String filename){
   return "text/plain";
 }
 
+void vote_loop() {
+  if (voteStarted && millis() > voteStartTime + TEN_MINUTES) {
+    voteStarted = false;
+    voteEndedTime = millis();
+    changeTemperature();
+  }
+}
+
+void changeTemperature() {
+
+}
 
 bool webserver_handleFileRead(String path){
 

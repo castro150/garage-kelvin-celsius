@@ -35,4 +35,5 @@ void setup() {
 void loop() {
   t.update();
   server.handleClient();
+  vote_loop();
 }
